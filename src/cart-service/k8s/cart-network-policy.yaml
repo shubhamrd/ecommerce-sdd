@@ -1,0 +1,96 @@
+# Network Policy for cart-service
+# Version: 1.0.0
+# Platform: E-commerce Microservices
+# Namespace: ecommerce-prod
+# Purpose: Restrict inter-service communication to required endpoints
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cart-service-network-policy
+  namespace: ecommerce-prod
+  labels:
+    app: cart-service
+    version: v1
+    tier: backend
+    cost-center: platform-ecommerce
+spec:
+  # Apply to cart-service pods
+  podSelector:
+    matchLabels:
+      app: cart-service
+  # Policy type - ingress and egress
+  policyTypes:
+    - Ingress
+    - Egress
+  # Ingress rules
+  ingress:
+    # Allow from ALB Ingress Controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from auth-service (for user validation)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow from order-service (for cart operations)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: order-service
+      ports:
+        - protocol: TCP
+          port: 3000
+  # Egress rules
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow Redis connections (for cart storage)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: redis
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow outbound HTTPS (for external APIs)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow internal VPC traffic for AWS services
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 443

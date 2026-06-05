@@ -1,0 +1,25 @@
+# Kubernetes Service for cart-service
+# Version: 1.0.0
+# Platform: E-commerce Microservices
+# Namespace: ecommerce-prod
+# Type: ClusterIP for internal service discovery
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service
+  namespace: ecommerce-prod
+  labels:
+    app: cart-service
+    version: v1
+    tier: backend
+    cost-center: platform-ecommerce
+spec:
+  type: ClusterIP
+  selector:
+    app: cart-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
